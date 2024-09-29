@@ -1,20 +1,18 @@
 {
   pkgs,
+  lib,
+  config,
   modulesPath,
+  username,
   ...
 }: {
-  imports = [
-    (modulesPath + "/installer/scan/not-detected.nix")
-  ];
+  imports = [(modulesPath + "/installer/scan/not-detected.nix")];
 
   hardware.opengl = {
     enable = true;
-    enable32Bit = true;
     driSupport = true;
     driSupport32Bit = true;
   };
-
-  services.xserver.videoDrivers = ["amdgpu"];
 
   programs = {
     steam = {
@@ -38,56 +36,53 @@
   virtualisation.libvirtd.enable = true;
   programs.virt-manager.enable = true;
 
-  hardware.bluetooth.enable = true;
-  hardware.bluetooth.powerOnBoot = true;
-
-  services.xserver = {
-    enable = true;
-    displayManager.sddm = {
+  hardware = {
+    bluetooth = {
       enable = true;
-      wayland.enable = true;
-      theme = "breeze";
-      settings = {
-        General = {
-          DisplayCommand = "/run/current-system/sw/bin/sleep 30";
-          Background = "~/Pictures/thetree.png";
-        };
+      powerOnBoot = true;
+    };
+
+    pulseaudio.enable = false;
+  };
+
+  services = {
+    xserver = {
+      enable = true;
+      xkb.layout = "us";
+      xkb.variant = "";
+      videoDrivers = ["amdgpu"];
+      displayManager.gdm.enable = true;
+    };
+
+    displayManager.autoLogin.user = username;
+    displayManager.autoLogin.enable = true;
+
+    printing.enable = true;
+
+    pipewire = {
+      enable = true;
+      alsa = {
+        enable = true;
+        support32Bit = true;
       };
+      pulse.enable = true;
+      jack.enable = true;
     };
-    desktopManager.plasma6.enable = true;
-    xkb = {
-      layout = "us";
-      variant = "";
-    };
+
+    hardware.openrgb.enable = true;
+
+    ratbagd.enable = true;
   };
 
-  services.printing.enable = true;
-
-  hardware.pulseaudio.enable = false;
   security.rtkit.enable = true;
-  services.pipewire = {
-    enable = true;
-    alsa = {
-      enable = true;
-      support32Bit = true;
-    };
-    pulse.enable = true;
-    jack.enable = true;
-  };
 
-  users.users.pretender = {
+  users.users.${username} = {
     isNormalUser = true;
-    description = "pretender";
+    description = username;
     extraGroups = ["networkmanager" "wheel"];
   };
 
   programs.firefox.enable = true;
-
-  #enable open RGB
-  services.hardware.openrgb.enable = true;
-
-  # depedency for piper
-  services.ratbagd.enable = true;
 
   # List packages installed in system profile
   environment.systemPackages = with pkgs; [
@@ -162,13 +157,34 @@
     mako #hyprland plugin
   ];
 
-  # Environment session variables
-  environment.sessionVariables = {
-    STEAM_EXTRA_COMPAT_TOOL_PATHS = "/home/pretender/.steam/root/compatibilitytools.d";
-  };
-  #fonts
   fonts.packages = with pkgs; [
     fira-code
     fira-code-symbols
   ];
+
+  # hardware-configuration.nix
+  networking.useDHCP = lib.mkDefault true;
+  nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
+
+  boot = {
+    initrd.availableKernelModules = ["nvme" "xhci_pci" "ahci" "usb_storage" "usbhid" "sd_mod"];
+    initrd.kernelModules = [];
+    kernelModules = ["kvm-amd"];
+    extraModulePackages = [];
+  };
+
+  fileSystems = {
+    "/" = {
+      device = "/dev/disk/by-uuid/a81c0627-6646-4ac3-b422-ff0dd165a7f9";
+      fsType = "ext4";
+    };
+    "/boot" = {
+      device = "/dev/disk/by-uuid/7BFB-D0DD";
+      fsType = "vfat";
+      options = ["fmask=0022" "dmask=0022"];
+    };
+  };
+  swapDevices = [];
+
+  hardware.cpu.amd.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
 }

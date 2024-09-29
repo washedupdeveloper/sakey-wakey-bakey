@@ -11,15 +11,17 @@
     };
   };
 
-  outputs = {self, ...} @ inputs: {
+  outputs = {self, ...} @ inputs: let
+    username = "pretender";
+  in {
     nixosConfigurations = {
       faker = inputs.nixpkgs.lib.nixosSystem {
-        specialArgs = {inherit inputs;};
+        specialArgs = {inherit inputs username;};
         system = "x86_64-linux";
         modules = [
           ./hosts/faker.nix # host file, hardware, unique stuff
           ./modules/home # shared home module
-          ./modules/nixos # shared system (nixos) module
+          ./modules/nixos/system.nix # shared system (nixos) module
         ];
       };
     };
